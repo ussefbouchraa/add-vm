@@ -15,5 +15,4 @@ Vagrant.configure("2") do |config|
   # Provisioning scripts
   config.vm.provision "shell", path: "provision/linux.sh"
   config.vm.provision "shell", path: "provision/login.sh"
-
 end
