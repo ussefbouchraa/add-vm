@@ -1,0 +1,35 @@
+ What does "unattended" mean?
+
+The computer should do the work without asking you questions.
+
+You should be able to start the environment and let it configure itself.
+
+No:
+
+"Please create this user"
+"Please configure this"
+"Please install this"
+
+
+
+--------------------------------
+
+What is Idempotency? ⭐
+
+
+Running your configuration again should not break the machine or create duplicates.
+
+Imagine your script says:
+
+Create user bob
+
+If you run it once:
+
+bob exists ✅
+
+Run it again:
+
+bob already exists → don't create another bob
+
+That's idempotent.
+
