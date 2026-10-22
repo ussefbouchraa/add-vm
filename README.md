@@ -83,3 +83,25 @@ provision/
                           │
                           ▼
                 Configured Server
+
+
+/************************************************************
+
+ “provision/linux.sh”
+
+• Network: detects primary interface, adds static 10.0.2.15/24, persists via /etc/network/interfaces.d/01-static
+• Systemd service: deploys heartbeat.service — a simple logger that writes to /var/log/heartbeat.log every 10 seconds
+• Storage: adds /data mount point and a tmpfs overlay at /var/tmp (256 MB, ephemeral)
+• Packages: installs curl, jq, vim, htop, rsync (apt handles idempotency)
+
+"provision/login.sh"
+
+• Groups: developers, admin (created only if missing)
+• Users: alice, bob, carol with passwords set (chpasswd is overwrite-safe)
+• Sudo policy: %developers ALL=(ALL:ALL) ALL, %admin with NOPASSACK for systemctl — validated with visudo -c
+• SSH hardening: PasswordAuthentication no, PubkeyAuthentication yes, PermitRootLogin no in a snippet under /etc/ssh/sshd_config.d/
+• Permissions: tightens .ssh directories for each user
+• Root locked: passwd -l root
+
+provision/verify.sh
+The regression test from your login project — 22 assertions covering users, groups, sudo, SSH, network, systemd service, storage, and root account. Returns exit 0 on all-pass, exit 1 on any failure.
