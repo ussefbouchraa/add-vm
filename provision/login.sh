@@ -1,39 +1,54 @@
 
 #!/usr/bin/env bash
-# Configure users, groups, sudo, and SSH security.
+
+# Stop if a command fails.
 set -e
 
-echo "=== Login setup started ==="
+echo "===== LOGIN SETUP STARTED ====="
+
+# ==========================================
+# 1. CREATE GROUPS
+# ==========================================
+echo "Creating groups..."
+
+getent group developers || groupadd developers
+getent group admin || groupadd admin
 
 
-# 1. GROUPS
-echo "--- Creating groups"
+# ==========================================
+# 2. CREATE USERS
+# ==========================================
+echo "Creating users..."
 
-for group in developers admin; do
-    getent group "$group" || groupadd "$group"
-done
+# Create ybouchra in the developers group.
+id ybouchra >/dev/null 2>&1 || useradd -m -g developers ybouchra
+
+# Create ussef in the admin group.
+id ussef >/dev/null 2>&1 || useradd -m -g admin ussef
 
 
-# 2. USERS
-echo "--- Creating users"
+# ==========================================
+# 3. SET PASSWORDS
+# ==========================================
+echo "Setting passwords..."
 
-# Create each user only if missing.
-id alice >/dev/null 2>&1 || useradd -m -g developers alice
-id bob   >/dev/null 2>&1 || useradd -m -g developers bob
-id carol >/dev/null 2>&1 || useradd -m -g admin carol
-
-# Set passwords.
 printf '%s\n' \
-    'alice:SecurePass123!' \
-    'bob:SecurePass456!' \
-    'carol:SecurePass789!' | chpasswd
+    'ybouchra:123456789' \
+    'ussef:987654321' | chpasswd
 
-# Lock root password.
+
+# ==========================================
+# 4. LOCK ROOT PASSWORD
+# ==========================================
+echo "Locking root password..."
+
 passwd -l root
 
 
-# 3. SUDO PERMISSIONS
-echo "--- Configuring sudo"
+# ==========================================
+# 5. CONFIGURE SUDO PERMISSIONS
+# ==========================================
+echo "Configuring sudo..."
 
 cat > /etc/sudoers.d/90-developers <<'EOF'
 %developers ALL=(ALL:ALL) ALL
@@ -44,8 +59,10 @@ chmod 440 /etc/sudoers.d/90-developers
 visudo -c
 
 
-# 4. SSH SECURITY
-echo "--- Configuring SSH"
+# ==========================================
+# 6. CONFIGURE SSH SECURITY
+# ==========================================
+echo "Configuring SSH..."
 
 mkdir -p /etc/ssh/sshd_config.d
 
@@ -55,15 +72,17 @@ PubkeyAuthentication yes
 PermitRootLogin no
 EOF
 
-# Check the configuration before restarting SSH.
+# Check SSH configuration before restarting.
 sshd -t
 systemctl restart ssh
 
 
-# 5. SSH FILE PERMISSIONS
-echo "--- Protecting SSH files"
+# ==========================================
+# 7. PROTECT SSH FILES
+# ==========================================
+echo "Protecting SSH files..."
 
-for user in alice bob carol; do
+for user in ybouchra ussef; do
     HOME_DIR=$(getent passwd "$user" | cut -d: -f6)
 
     if [ -d "$HOME_DIR/.ssh" ]; then
@@ -76,16 +95,21 @@ for user in alice bob carol; do
 done
 
 
-# 6. VERIFICATION SCRIPT
-echo "--- Checking verification script"
+# ==========================================
+# 8. INSTALL VERIFICATION SCRIPT
+# ==========================================
+echo "Installing verification script..."
 
 if [ -f /vagrant/provision/verify.sh ]; then
     cp /vagrant/provision/verify.sh /usr/local/bin/verify.sh
     chmod 755 /usr/local/bin/verify.sh
-    echo "Verification script installed"
+    echo "Verification script installed."
 else
-    echo "WARNING: verify.sh was not found"
+    echo "WARNING: verify.sh not found."
 fi
 
 
-echo "=== Login setup complete ==="
+# ==========================================
+# FINISHED
+# ==========================================
+echo "===== LOGIN SETUP COMPLETED ====="

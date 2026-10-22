@@ -32,16 +32,16 @@ EOF
 
 
 # 2. SYSTEMD SERVICE
-echo "--- Installing heartbeat service"
+echo "--- Installing time_logger service"
 
 # One file: the service writes a message every 10 seconds.
-cat > /etc/systemd/system/heartbeat.service <<'EOF'
+cat > /etc/systemd/system/time_logger.service <<'EOF'
 [Unit]
-Description=Heartbeat logging service
+Description=time_logger logging service
 
 [Service]
 Type=simple
-ExecStart=/bin/sh -c 'while true; do date >> /var/log/heartbeat.log; sleep 10; done'
+ExecStart=/bin/sh -c 'while true; do date >> /var/log/time_logger.log; sleep 10; done'
 Restart=on-failure
 
 [Install]
@@ -49,7 +49,7 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now heartbeat.service
+systemctl enable --now time_logger.service
 
 
 # 3. STORAGE
@@ -76,4 +76,4 @@ apt-get install -y curl jq vim htop rsync
 
 # FINISHED
 echo "=== Linux setup complete ==="
-systemctl --no-pager status heartbeat.service
+systemctl --no-pager status time_logger.service

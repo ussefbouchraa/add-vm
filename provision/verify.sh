@@ -32,7 +32,8 @@ check "user bob exists"          id bob
 check "user carol exists"        id carol
 check "group developers exists"  getent group developers
 check "group admin exists"       getent group admin
-check "alice in developers"      grep -q "^alice:" /etc/group | grep developers || id alice | grep -q developers
+# check "alice in developers"      grep -q "^alice:" /etc/group | grep developers || id alice | grep -q developers
+check "alice in developers" id -nG alice | grep -qw developers
 check "carol in admin"           id carol | grep -q admin
 
 # ---------------------------------------------------------------------------
@@ -67,10 +68,10 @@ check "static address 10.0.2.15/24 present" \
 # 5. Systemd service
 # ---------------------------------------------------------------------------
 echo "--- Systemd service ---"
-check "heartbeat.service exists"        test -f /etc/systemd/system/heartbeat.service
-check "heartbeat.service is active"     systemctl is-active --quiet heartbeat.service
-check "heartbeat script exists"          test -x /usr/local/bin/heartbeat.sh
-check "heartbeat log is being written"   test -f /var/log/heartbeat.log
+check "time_logger.service exists"        test -f /etc/systemd/system/time_logger.service
+check "time_logger.service is active"     systemctl is-active --quiet time_logger.service
+check "time_logger script exists"          test -x /usr/local/bin/time_logger.sh
+check "time_logger log is being written"   test -f /var/log/time_logger.log
 
 # ---------------------------------------------------------------------------
 # 6. Storage layout
