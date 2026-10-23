@@ -27,14 +27,14 @@ echo ""
 # 1. Users and groups
 # ---------------------------------------------------------------------------
 echo "--- Users and groups ---"
-check "user alice exists"        id alice
-check "user bob exists"          id bob
-check "user carol exists"        id carol
+check "user ybouchra exists"        id ybouchra
+check "user ussef exists"          id ussef
+check "user youssef exists"        id youssef
 check "group developers exists"  getent group developers
 check "group admin exists"       getent group admin
-# check "alice in developers"      grep -q "^alice:" /etc/group | grep developers || id alice | grep -q developers
-check "alice in developers" id -nG alice | grep -qw developers
-check "carol in admin"           id carol | grep -q admin
+# check "ybouchra in developers"      grep -q "^ybouchra:" /etc/group | grep developers || id ybouchra | grep -q developers
+check "ybouchra in developers" id -nG ybouchra | grep -qw developers
+check "youssef in admin"           id youssef | grep -q admin
 
 # ---------------------------------------------------------------------------
 # 2. Sudo policy
