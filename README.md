@@ -1,107 +1,54 @@
-1. 📦 Vagrant
+# add-vm
 
+This project turns the hand-built Linux server into reproducible Infrastructure as Code using Vagrant.
 
-Vagrant helps you:
+## Goal
+Rebuild the machine with a single vagrant up and no manual input. The rebuilt VM must pass provision/verify.sh.
 
-create a VM
-start it
-stop it
-connect to it
-destroy it
-configure it automatically
+## Repository Structure
+```text
+add-vm/
+|-- README.md
+|-- Vagrantfile
+|-- provision/
+|   |-- linux.sh
+|   |-- login.sh
+|   `-- verify.sh
+`-- .gitignore
+```
 
-Important commands:
+## Prerequisites
+- Vagrant
+- VirtualBox (x86_64/AMD64)
+- Git
 
-vagrant up : create new VM
+## Build Instructions
+```bash
+git clone <repo-url>
+cd add-vm
+vagrant up
+```
+
+## Verify
+```bash
 vagrant ssh
-vagrant status : give thr current status of my VM
-vagrant destroy | -f : delete VM
+sudo /usr/local/bin/verify.sh
+```
 
+## Reproducibility
+```bash
+vagrant destroy -f
+vagrant up
+vagrant ssh -c "sudo /usr/local/bin/verify.sh"
+```
 
-**************** Vagrant is the tool that create/manages the VM for you.
+## Architecture Notes
+- x86_64/Intel/AMD: virtualbox + debian/bookworm64
+- Apple Silicon (ARM64): use vagrant-qemu with arm64 box (VirtualBox not supported)
 
---------------------------------------------------------------------------------------------
+## Snapshot vs Rebuild
+- Snapshot: experiment safely, quick rollback
+- Rebuild from code: source of truth for audit/sharing
 
-2. 📜 Vagrantfile
-
-The Vagrantfile is the configuration/recipe for your VM.
-
-It tells Vagrant things like:
-
-Which operating system/base box to use
-How much RAM/CPU
-Network configuration
-Which scripts to run
-Which provider to use
-
-
-**************** Vagrantfile = instructions for how my VM should be created and configured.
-
---------------------------------------------------------------------------------------------
-
-
-3. ⚙️ Provisioning
-
-
-Creating the VM is not enough.
-
-You also need to configure it:
-
-install packages
-create users
-create groups
-configure SSH
-configure sudo
-configure network
-create services
-configure permissions
-
-You can put these instructions in scripts such as:
-
-provision/
-├── linux.sh
-└── login.sh
-
-
-*******************  Vagrant creates the machine. Provisioning configures the machine 
-
---------------------------------------------------------------------------------------------
-
-          ┌─────────────┐
-          │ Vagrantfile │
-          └──────┬──────┘
-                 │
-                 ▼
-             VAGRANT
-                 │
-        ┌────────┴────────┐
-        ▼                 ▼
-      Create VM      Provision VM
-                          │
-                          ▼
-                 linux.sh / login.sh
-                          │
-                          ▼
-                Configured Server
-
-
-/************************************************************
-
- “provision/linux.sh”
-
-• Network: detects primary interface, adds static 10.0.2.15/24, persists via /etc/network/interfaces.d/01-static
-• Systemd service: deploys heartbeat.service — a simple logger that writes to /var/log/heartbeat.log every 10 seconds
-• Storage: adds /data mount point and a tmpfs overlay at /var/tmp (256 MB, ephemeral)
-• Packages: installs curl, jq, vim, htop, rsync (apt handles idempotency)
-
-"provision/login.sh"
-
-• Groups: developers, admin (created only if missing)
-• Users: alice, bob, carol with passwords set (chpasswd is overwrite-safe)
-• Sudo policy: %developers ALL=(ALL:ALL) ALL, %admin with NOPASSACK for systemctl — validated with visudo -c
-• SSH hardening: PasswordAuthentication no, PubkeyAuthentication yes, PermitRootLogin no in a snippet under /etc/ssh/sshd_config.d/
-• Permissions: tightens .ssh directories for each user
-• Root locked: passwd -l root
-
-provision/verify.sh
-The regression test from your login project — 22 assertions covering users, groups, sudo, SSH, network, systemd service, storage, and root account. Returns exit 0 on all-pass, exit 1 on any failure.
+## Idempotency
+Scripts guard existing resources to avoid duplicates on re-provision.

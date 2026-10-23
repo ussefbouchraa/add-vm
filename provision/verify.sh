@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # verify.sh — regression test for the add-vm project.
-# Run this AFTER `vagrant up` to confirm the rebuilt machine is correctly configured.
-# Every assertion must pass. If any fail, the configuration was not fully captured in code.
+
 set -euo pipefail
 
 PASS=0
