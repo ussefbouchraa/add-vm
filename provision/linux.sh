@@ -5,20 +5,11 @@ set -e
 
 echo "=== Linux setup started ==="
 
+
 # 1. NETWORK
 echo "--- Configuring network"
 
-INTERFACE=$(ip route show default | awk '{print $5; exit}')
-
-if [ -z "$INTERFACE" ]; then
-    echo "ERROR: No network interface found"
-    exit 1
-fi
-
-# Add the IP only if it is not already configured.
-if ! ip addr show "$INTERFACE" | grep -q "10.0.2.15/24"; then
-    ip addr add 10.0.2.15/24 dev "$INTERFACE"
-fi
+INTERFACE="enp0s8"
 
 # Save the configuration for future boots.
 mkdir -p /etc/network/interfaces.d
@@ -26,7 +17,7 @@ mkdir -p /etc/network/interfaces.d
 cat > /etc/network/interfaces.d/01-static <<EOF
 auto $INTERFACE
 iface $INTERFACE inet static
-    address 10.0.2.15
+    address 192.168.56.10
     netmask 255.255.255.0
 EOF
 

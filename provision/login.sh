@@ -12,7 +12,8 @@ echo "===== LOGIN SETUP STARTED ====="
 echo "Creating groups..."
 
 getent group developers || groupadd developers
-getent group admin || groupadd admin
+getent group deploy     || groupadd deploy
+getent group admin      || groupadd admin
 
 
 # ==========================================
@@ -20,11 +21,10 @@ getent group admin || groupadd admin
 # ==========================================
 echo "Creating users..."
 
-# Create ybouchra in the developers group.
+# 2. Create users if they do not exist
 id ybouchra >/dev/null 2>&1 || useradd -m -g developers ybouchra
-
-# Create ussef in the admin group.
 id ussef >/dev/null 2>&1 || useradd -m -g admin ussef
+id bouchraa >/dev/null 2>&1 || useradd -m -g deploy bouchraa
 
 
 # ==========================================
@@ -33,9 +33,15 @@ id ussef >/dev/null 2>&1 || useradd -m -g admin ussef
 echo "Setting passwords..."
 
 printf '%s\n' \
-    'ybouchra:123456789' \
-    'ussef:987654321' | chpasswd
+    'ybouchra:A123456789' \
+    'bouchraa:B123456789' \
+    'ussef:C123456789' | chpasswd
 
+
+# Password expiry policy: 90 days, minimum 1 day, warning 7 days
+for user in ybouchra ussef bouchraa; do
+    chage -M 90 -m 1 -W 7 "$user"
+done
 
 # ==========================================
 # 4. LOCK ROOT PASSWORD
@@ -50,12 +56,13 @@ passwd -l root
 # ==========================================
 echo "Configuring sudo..."
 
-cat > /etc/sudoers.d/90-developers <<'EOF'
-%developers ALL=(ALL:ALL) ALL
-%admin ALL=(ALL) NOPASSWD: /usr/bin/systemctl
+cat > /etc/sudoers.d/sudo_config <<'EOF'
+%admin ALL=(ALL:ALL) ALL
+%developers ALL=(root) /usr/bin/systemctl restart time_logger.service
+%deploy ALL=(root) /usr/bin/systemctl restart time_logger.service
 EOF
 
-chmod 440 /etc/sudoers.d/90-developers
+chmod 440 /etc/sudoers.d/sudo_config
 visudo -c
 
 
@@ -66,7 +73,7 @@ echo "Configuring SSH..."
 
 mkdir -p /etc/ssh/sshd_config.d
 
-cat > /etc/ssh/sshd_config.d/90-hardening.conf <<'EOF'
+cat > /etc/ssh/sshd_config.d/ssh-security.conf <<'EOF'
 PasswordAuthentication no
 PubkeyAuthentication yes
 PermitRootLogin no
@@ -82,18 +89,18 @@ systemctl restart ssh
 # ==========================================
 echo "Protecting SSH files..."
 
-for user in ybouchra ussef; do
+for user in ybouchra ussef bouchraa; do
     HOME_DIR=$(getent passwd "$user" | cut -d: -f6)
+    USER_GROUP=$(id -gn "$user")
 
-    if [ -d "$HOME_DIR/.ssh" ]; then
-        chmod 700 "$HOME_DIR/.ssh"
+    install -d -m 700 -o "$user" -g "$USER_GROUP" \
+        "$HOME_DIR/.ssh"
 
-        if [ -f "$HOME_DIR/.ssh/authorized_keys" ]; then
-            chmod 600 "$HOME_DIR/.ssh/authorized_keys"
-        fi
+    if [ -f "$HOME_DIR/.ssh/authorized_keys" ]; then
+        chown "$user:$USER_GROUP" "$HOME_DIR/.ssh/authorized_keys"
+        chmod 600 "$HOME_DIR/.ssh/authorized_keys"
     fi
 done
-
 
 # ==========================================
 # 8. INSTALL VERIFICATION SCRIPT

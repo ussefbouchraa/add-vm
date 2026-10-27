@@ -105,3 +105,11 @@ provision/
 
 provision/verify.sh
 The regression test from your login project — 22 assertions covering users, groups, sudo, SSH, network, systemd service, storage, and root account. Returns exit 0 on all-pass, exit 1 on any failure.
+ 
+
+
+ -------------------------------
+
+ What does "unattended" ----> The computer should with no manual input
+
+What is Idempotency?  ---->Running your configuration again should not break the machine or create duplicates.
