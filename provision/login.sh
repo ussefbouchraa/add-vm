@@ -89,6 +89,13 @@ systemctl restart ssh
 # ==========================================
 echo "Protecting SSH files..."
 
+PUBLIC_KEY_FILE="/tmp/vagrant_id_ed25519.pub"
+
+if [ ! -s "$PUBLIC_KEY_FILE" ]; then
+    echo "ERROR: Public key not found" >&2
+    exit 1
+fi
+
 for user in ybouchra ussef bouchraa; do
     HOME_DIR=$(getent passwd "$user" | cut -d: -f6)
     USER_GROUP=$(id -gn "$user")
@@ -96,10 +103,8 @@ for user in ybouchra ussef bouchraa; do
     install -d -m 700 -o "$user" -g "$USER_GROUP" \
         "$HOME_DIR/.ssh"
 
-    if [ -f "$HOME_DIR/.ssh/authorized_keys" ]; then
-        chown "$user:$USER_GROUP" "$HOME_DIR/.ssh/authorized_keys"
-        chmod 600 "$HOME_DIR/.ssh/authorized_keys"
-    fi
+    install -m 600 -o "$user" -g "$USER_GROUP" \
+        "$PUBLIC_KEY_FILE" "$HOME_DIR/.ssh/authorized_keys"
 done
 
 # ==========================================

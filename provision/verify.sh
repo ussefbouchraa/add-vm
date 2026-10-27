@@ -21,7 +21,7 @@ check() {
 }
 
 echo "============================================"
-echo " Verification — add-vm (login project)"
+echo " Verification — add-vm "
 echo "============================================"
 echo
 
