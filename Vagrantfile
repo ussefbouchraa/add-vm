@@ -14,8 +14,8 @@ Vagrant.configure("2") do |config|
     end
 
     config.vm.provision "file",
-      source: "~/.ssh/id_ed25519.pub",
-      destination: "/tmp/vagrant_id_ed25519.pub"
+      source: "~/.ssh/id_rsa.pub",
+      destination: "/tmp/vagrant_id_rsa.pub"
 
     # Network configuration
     config.vm.network "private_network", ip: "192.168.56.10"

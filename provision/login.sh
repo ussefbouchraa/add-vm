@@ -89,7 +89,7 @@ systemctl restart ssh
 # ==========================================
 echo "Protecting SSH files..."
 
-PUBLIC_KEY_FILE="/tmp/vagrant_id_ed25519.pub"
+PUBLIC_KEY_FILE="/tmp/vagrant_id_rsa.pub"
 
 if [ ! -s "$PUBLIC_KEY_FILE" ]; then
     echo "ERROR: Public key not found" >&2
