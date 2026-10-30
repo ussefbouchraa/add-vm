@@ -62,7 +62,7 @@ echo "--- Installing packages"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y curl jq vim htop rsync
+apt-get install -y curl jq vim htop rsync sudo openssh-server
 
 
 # FINISHED

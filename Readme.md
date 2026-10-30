@@ -68,7 +68,14 @@ VirtualBox is not supported as the virtualization provider on Apple Silicon Macs
 
 To support ARM64, use an ARM-compatible provider such as QEMU through `vagrant-qemu`, or VMware Fusion, and select a compatible ARM64 Debian base box.
 
-The Vagrant workflow remains similar, but the provider, box and possibly provider-specific settings must change. The provisioning scripts should avoid unnecessary architecture-specific assumptions.
+
+### Architecture Compatibility
+
+| Architecture | Provider | Base Box |
+|---|---|---|
+| x86-64 (Intel / AMD) | VirtualBox | Debian AMD64 (`debian/bookworm64`) |
+| Apple Silicon (ARM64) | QEMU or VMware Fusion | Debian ARM64 |
+
 
 ## Virtual Machine Configuration
 

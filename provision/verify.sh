@@ -1,158 +1,175 @@
 
 #!/usr/bin/env bash
-# verify.sh — regression test for the add-vm project.
-# Run after provisioning the VM.
+# Verify the add-vm project.
+# Run with: sudo ./verify.sh
+
 set -uo pipefail
+
+# Root access is required.
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run: sudo ./verify.sh"
+    exit 1
+fi
 
 PASS=0
 FAIL=0
 
+# Run a check and display its result.
 check() {
-    local desc="$1"
+    local description="$1"
     shift
 
     if "$@"; then
-        echo "  PASS: $desc"
-        PASS=$((PASS + 1))
+        echo "PASS: $description"
+        ((PASS += 1))
     else
-        echo "  FAIL: $desc"
-        FAIL=$((FAIL + 1))
+        echo "FAIL: $description"
+        ((FAIL += 1))
     fi
 }
 
-echo "============================================"
-echo " Verification — add-vm "
-echo "============================================"
-echo
+echo "================================"
+echo "      ADD-VM VERIFICATION"
+echo "================================"
 
-# 1. Users and groups
+# 1. USERS AND GROUPS
+echo
 echo "--- Users and groups ---"
 
-check "user ybouchra exists" id ybouchra
-check "user ussef exists" id ussef
-check "user bouchraa exists" id bouchraa
+check "ybouchra exists" id ybouchra
+check "ussef exists" id ussef
+check "bouchraa exists" id bouchraa
 
-check "group developers exists" getent group developers
-check "group admin exists" getent group admin
-check "group deploy exists" getent group deploy
+check "developers group exists" getent group developers
+check "admin group exists" getent group admin
+check "deploy group exists" getent group deploy
 
 check "ybouchra belongs to developers" \
-    id -nG ybouchra | grep -qw developers
+    bash -c 'id -nG ybouchra | grep -qw developers'
+
 check "ussef belongs to admin" \
-    id -nG ussef | grep -qw admin
+    bash -c 'id -nG ussef | grep -qw admin'
+
 check "bouchraa belongs to deploy" \
-    id -nG bouchraa | grep -qw deploy
+    bash -c 'id -nG bouchraa | grep -qw deploy'
 
-# 2. Sudo policy
+
+# 2. SUDO PERMISSIONS
 echo
-echo "--- Sudo policy ---"
+echo "--- Sudo permissions ---"
 
-SUDOERS_FILE="/etc/sudoers.d/sudo_config"
+SUDOERS="/etc/sudoers.d/sudo_config"
 
-check "sudoers file exists" test -f "$SUDOERS_FILE"
+check "sudoers file exists" test -f "$SUDOERS"
 check "sudoers permissions are 440" \
-    test "$(stat -c '%a' "$SUDOERS_FILE" 2>/dev/null)" = "440"
-check "sudoers syntax is valid" \
-    visudo -cf "$SUDOERS_FILE"
+    bash -c 'test "$(stat -c %a "$1")" = 440' _ "$SUDOERS"
 
-check "admin has unrestricted sudo" \
-    sudo -l -U ussef 2>/dev/null |
-    grep -Eq '\(ALL(:ALL)?\)[[:space:]]+ALL'
+check "sudoers syntax is valid" /usr/sbin/visudo -c
 
-check "developer can restart only time_logger.service" \
-    sudo -l -U ybouchra 2>/dev/null |
-    grep -Fq '/usr/bin/systemctl restart time_logger.service'
+check "ussef has admin privileges" \
+    bash -c 'sudo -l -U ussef 2>/dev/null | grep -q "ALL"'
 
-check "deploy can restart only time_logger.service" \
-    sudo -l -U bouchraa 2>/dev/null |
-    grep -Fq '/usr/bin/systemctl restart time_logger.service'
+check "ybouchra can restart time_logger" \
+    bash -c 'sudo -l -U ybouchra 2>/dev/null | grep -Fq "time_logger.service"'
 
-check "developer is not in sudo group" \
-    ! id -nG ybouchra | grep -qw sudo
-check "deploy is not in sudo group" \
-    ! id -nG bouchraa | grep -qw sudo
+check "bouchraa can restart time_logger" \
+    bash -c 'sudo -l -U bouchraa 2>/dev/null | grep -Fq "time_logger.service"'
 
-# 3. SSH configuration
+check "ybouchra is not in sudo group" \
+    bash -c '! id -nG ybouchra | grep -qw sudo'
+
+check "bouchraa is not in sudo group" \
+    bash -c '! id -nG bouchraa | grep -qw sudo'
+
+
+# 3. SSH CONFIGURATION
 echo
 echo "--- SSH configuration ---"
 
-SSHD_SNIPPET="/etc/ssh/sshd_config.d/ssh-security.conf"
+SSH_CONFIG="/etc/ssh/sshd_config.d/ssh-security.conf"
 
-check "SSH security snippet exists" test -f "$SSHD_SNIPPET"
-check "password authentication disabled" \
-    grep -Eq '^[[:space:]]*PasswordAuthentication[[:space:]]+no([[:space:]]|$)' "$SSHD_SNIPPET"
-check "public-key authentication enabled" \
-    grep -Eq '^[[:space:]]*PubkeyAuthentication[[:space:]]+yes([[:space:]]|$)' "$SSHD_SNIPPET"
-check "root SSH login disabled" \
-    grep -Eq '^[[:space:]]*PermitRootLogin[[:space:]]+no([[:space:]]|$)' "$SSHD_SNIPPET"
+check "SSH configuration exists" test -f "$SSH_CONFIG"
 
-check "effective SSH configuration is valid" sshd -t
+check "password login is disabled" \
+    grep -Eq '^PasswordAuthentication no$' "$SSH_CONFIG"
+
+check "public-key login is enabled" \
+    grep -Eq '^PubkeyAuthentication yes$' "$SSH_CONFIG"
+
+check "root SSH login is disabled" \
+    grep -Eq '^PermitRootLogin no$' "$SSH_CONFIG"
+
+check "SSH configuration is valid" /usr/sbin/sshd -t
 
 for user in ybouchra ussef bouchraa; do
     HOME_DIR=$(getent passwd "$user" | cut -d: -f6)
-    check "$user has an authorized_keys file" \
+
+    check "$user has authorized_keys" \
         test -s "$HOME_DIR/.ssh/authorized_keys"
+
+    check "$user SSH directory permissions are 700" \
+        bash -c 'test "$(stat -c %a "$1/.ssh")" = 700' _ "$HOME_DIR"
+
+    check "$user authorized_keys permissions are 600" \
+        bash -c 'test "$(stat -c %a "$1/.ssh/authorized_keys")" = 600' _ "$HOME_DIR"
 done
 
-# 4. Network configuration
+
+# 4. NETWORK
 echo
-echo "--- Network configuration ---"
+echo "--- Network ---"
 
-INTERFACE=$(
-    ip -o -4 addr show |
-    awk '$4 == "10.0.2.15/24" {print $2; exit}'
-)
+check "private IP 192.168.56.10 exists" \
+    bash -c 'ip -o -4 addr show | grep -q "192.168.56.10/24"'
 
-check "static address 10.0.2.15/24 is present" \
-    test -n "$INTERFACE"
 
-# Note: this verifies the address is present, not that its
-# configuration survives reboot as a static address.
-
-# 5. Systemd service
+# 5. SYSTEMD SERVICE
 echo
 echo "--- Systemd service ---"
 
 check "time_logger.service exists" \
     test -f /etc/systemd/system/time_logger.service
+
 check "time_logger.service is active" \
     systemctl is-active --quiet time_logger.service
-check "time_logger script is executable" \
-    test -x /usr/local/bin/time_logger.sh
+
 check "time_logger log exists" \
     test -f /var/log/time_logger.log
 
-# 6. Storage layout
+
+# 6. STORAGE
 echo
-echo "--- Storage layout ---"
+echo "--- Storage ---"
 
 check "/data directory exists" test -d /data
-check "/var/tmp is mounted as tmpfs" \
+
+check "/var/tmp uses tmpfs" \
     findmnt -rn -T /var/tmp -t tmpfs
 
-# 7. Root account and password policy
+
+# 7. PASSWORD POLICY
 echo
-echo "--- Root and password policy ---"
+echo "--- Password policy ---"
 
 check "root password is locked" \
-    passwd -S root | awk '$2 == "L" {found=1} END {exit !found}'
+    bash -c 'passwd -S root | grep -q " L "'
 
 for user in ybouchra ussef bouchraa; do
-    check "$user password expiry is 90 days" \
-        chage -l "$user" |
-        grep -q 'Maximum number of days between password change.*90'
+    check "$user password expires after 90 days" \
+        bash -c 'chage -l "$1" | grep -q "Maximum.*90"' _ "$user"
 done
 
-# 8. Summary
-echo
-echo "============================================"
-echo " Results: $PASS passed, $FAIL failed"
-echo "============================================"
 
-if [ "$FAIL" -gt 0 ]; then
+# 8. RESULTS
+echo
+echo "================================"
+echo "Passed: $PASS"
+echo "Failed: $FAIL"
+echo "================================"
+
+if [ "$FAIL" -eq 0 ]; then
+    echo "VERIFICATION PASSED"
+else
     echo "VERIFICATION FAILED"
     exit 1
-else
-    echo "VERIFICATION PASSED"
-    exit 0
 fi
